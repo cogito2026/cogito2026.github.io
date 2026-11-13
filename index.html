@@ -1,0 +1,682 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#245f4b"><meta name="description" content="Cogito的metric hacking实验与输出流程，讨论世界模型分数与真实预测能力之间的关系。"><title>我们把世界模型的分数刷高了，然后呢？｜Cogito研究笔记</title><meta name="robots" content="noindex,nofollow,noarchive"><link rel="icon" href="./favicon.svg"><style>:root{--paper:#f7f6f1;--ink:#20342f;--muted:#697a71;--line:#d8ddd3;--green:#245f4b;--lime:#dbe8b7;--rust:#a05d43;--white:#fffefb}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.9}a{color:var(--green);text-underline-offset:4px}button,select{font:inherit}button,a,select,input{touch-action:manipulation}button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #b87d45;outline-offset:4px}button{cursor:pointer}header.site-header{position:sticky;top:0;z-index:20;background:#f7f6f1f5;backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.header-inner{max-width:1320px;margin:auto;padding:15px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{font-size:13px;font-weight:700;letter-spacing:.04em;text-decoration:none}.header-links{display:flex;gap:22px;font-size:12px}.header-links a{text-decoration:none;white-space:nowrap}.progress{height:2px;background:var(--green);width:0}.skip{position:absolute;left:16px;top:-80px;background:white;padding:8px}.skip:focus{top:8px}.layout{max-width:1320px;margin:auto;padding:0 32px;display:grid;grid-template-columns:190px minmax(0,1fr);gap:65px}.toc{position:sticky;top:100px;align-self:start;padding-top:52px;font-size:12px}.toc .label{font-size:10px;letter-spacing:2px;color:var(--muted)}.toc a{display:block;text-decoration:none;color:var(--muted);padding:8px 0;border-bottom:1px solid #e6e8df}.toc a:hover{color:var(--green)}article{min-width:0;padding-bottom:90px}.hero{padding:72px 0 40px;border-bottom:1px solid var(--line)}.kicker{font-size:11px;letter-spacing:2px;font-weight:650;color:var(--green);text-transform:uppercase}.hero h1{font-size:clamp(36px,4.8vw,64px);line-height:1.24;letter-spacing:-2px;margin:22px 0 26px;font-weight:650}.hero h1 em{font-style:normal;color:var(--green)}.standfirst{font-size:19px;max-width:730px;color:#54685d;line-height:1.8}.meta{display:flex;flex-wrap:wrap;gap:10px 22px;font-size:11px;color:var(--muted);margin-top:28px}.chapter{padding:45px 0 14px}.chapter h2{font-size:27px;line-height:1.5;letter-spacing:-.6px;margin:8px 0 25px}.chapter h3{font-size:19px;line-height:1.6;margin:36px 0 12px}.prose{max-width:760px;font-size:16px;line-height:2}.prose p{margin:0 0 21px}.prose strong{color:#163e30;font-weight:650}blockquote{margin:30px 0;padding:23px 28px;border-left:3px solid var(--green);background:#eaf0e3;font-size:20px;line-height:1.75}blockquote p{margin:0!important}.note{font-size:12px;line-height:1.9;color:#6f6754;background:#f0ecdf;padding:17px 20px;border-left:2px solid #b6a47a;margin:22px 0}.figure{margin:28px 0 34px;border:1px solid var(--line);background:var(--white);padding:26px;min-width:0}.figure-head{display:flex;gap:20px;justify-content:space-between;align-items:start;margin-bottom:18px}.figure h3{margin:0;font-size:16px}.figure .eyebrow{font-size:10px;letter-spacing:1.6px;color:var(--green);font-weight:650;margin-bottom:6px}.figure p{font-size:12px;color:var(--muted);margin:8px 0;line-height:1.85}figcaption,.caption{font-size:11px;line-height:1.9;color:var(--muted);margin-top:16px}.score-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.score-card{padding:15px 0;border-top:2px solid var(--green)}.score-card .id{font-size:11px;color:var(--muted)}.score-card strong{font-size:31px;letter-spacing:-1px;display:block;font-variant-numeric:tabular-nums;font-weight:600}.score-card span{font-size:11px;color:var(--muted)}.formula{font-family:ui-monospace,monospace;font-size:13px;padding:14px 18px;background:#edf1e8;overflow:auto}.comparison-controls{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0;align-items:center}.comparison-controls label{font-size:12px}.comparison-controls select,select{border:1px solid var(--line);background:var(--white);padding:8px 12px;border-radius:4px;color:var(--ink)}.button{border:1px solid #b8c8ba;background:var(--white);color:var(--green);border-radius:4px;padding:8px 14px;font-size:12px;display:inline-block;text-decoration:none}.button:hover{background:#eaf0e3}.button.primary{background:var(--green);color:white;border-color:var(--green)}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums;text-align:left}th{background:#f0f3eb;font-weight:550;white-space:nowrap}td,th{padding:10px 12px;border-bottom:1px solid #e5e8de}td.num{text-align:right;white-space:nowrap}tr:last-child td{border-bottom:0}.positive{color:#24735b}.negative{color:#a05d43}.delta-legend{font-size:11px;color:var(--muted)}.delta-chart{display:grid;gap:10px;margin:20px 0}.delta-row{display:grid;grid-template-columns:150px 1fr 64px;gap:10px;align-items:center;font-size:12px}.delta-track{height:14px;background:linear-gradient(to right,#f4ece6 50%,#edf2e7 50%);position:relative;border-left:1px solid #ddd}.delta-track:after{content:"";position:absolute;left:50%;height:100%;border-left:1px solid #a9b4a9}.delta-bar{position:absolute;height:100%;background:var(--green)}.delta-bar.neg{background:var(--rust)}.delta-value{text-align:right;font-variant-numeric:tabular-nums}.video-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.video-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.video-card{min-width:0}.video-card video{width:100%;aspect-ratio:4/3;background:#14241e;display:block;object-fit:contain}.video-card .video-title{font-size:12px;font-weight:650;margin-bottom:6px}.video-card .spec{font-size:10px;color:var(--muted);margin-top:7px;line-height:1.6}.media-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:17px 0}.media-status{font-size:11px;color:var(--muted);min-height:22px}.media-range{width:100%;accent-color:var(--green)}.still-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.still-grid img{width:100%;height:auto;display:block;image-rendering:auto}.still-grid b{font-size:12px}.paper-image{width:100%;height:auto;display:block}.steps{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}.step{padding:20px;border:1px solid var(--line);background:#fffefb}.step .tag{font-size:10px;letter-spacing:1px;color:var(--green)}.step h3{font-size:15px;margin:6px 0 10px}.step p{font-size:12px;color:var(--muted);margin:0}.chart-bars{display:grid;gap:16px;padding:15px 0}.chart-bar{display:grid;grid-template-columns:150px 1fr 50px;gap:10px;align-items:center;font-size:12px}.bar-track{height:16px;background:#eef0e7}.bar-track span{display:block;height:100%;background:var(--green)}.chart-bar:nth-child(3) .bar-track span{background:#a68564}.timeline{border-left:1px solid #a5b7a6;padding-left:23px;margin:25px 0}.timeline p{font-size:14px}.timeline b{display:block;font-size:12px;color:var(--green)}.source-list{font-size:12px;line-height:1.9;padding-left:20px}.source-list li{margin:14px 0;overflow-wrap:anywhere}.source-list a{font-weight:600}.reading-end{font-size:25px;line-height:1.7;color:var(--green);padding:28px 0;border-top:2px solid var(--green);margin-top:36px}.footer{border-top:1px solid var(--line);padding-top:25px;display:flex;gap:20px;flex-wrap:wrap;font-size:12px}.method-table td:first-child{font-weight:650;white-space:nowrap}details{border-top:1px solid var(--line);padding:15px 0;margin-top:18px}summary{cursor:pointer;font-size:13px;color:var(--green)}.small{font-size:12px;color:var(--muted)}.anchor{color:var(--green)}@media(max-width:1100px){.layout{grid-template-columns:145px minmax(0,1fr);gap:35px}.video-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:800px){.layout{display:block;padding:0 20px}.toc{position:static;padding:24px 0 0;display:flex;flex-wrap:wrap;gap:6px 16px}.toc .label{width:100%}.toc a{padding:3px 0;font-size:11px}.header-inner{padding:12px 20px}.header-links{gap:14px}.header-links .optional{display:none}.hero{padding:38px 0 30px}.hero h1{letter-spacing:-1px}.standfirst{font-size:17px}.prose{font-size:15px}.figure{padding:18px;margin-left:-4px;margin-right:-4px}.chapter{padding-top:34px}.chapter h2{font-size:23px}.score-strip{grid-template-columns:1fr 1fr;gap:8px 20px}.video-grid{grid-template-columns:1fr}.video-grid.four{grid-template-columns:1fr 1fr}.delta-row{grid-template-columns:105px 1fr 55px;font-size:10px}.steps{grid-template-columns:1fr}.chart-bar{grid-template-columns:115px 1fr 45px;font-size:11px}.figure-head{flex-direction:column;gap:4px}blockquote{font-size:18px;padding:18px}.still-grid{gap:10px}.reading-end{font-size:22px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important}}@media print{header.site-header,.toc,.media-controls,.comparison-controls{display:none}.layout{display:block;padding:0}body{background:white}.hero{padding-top:0}.figure{break-inside:avoid}a{color:inherit}article{padding:0}video{display:none}.video-card:after{content:"视频请在在线版中观看";font-size:11px}}
+
+.research-timeline{list-style:none;margin:28px 0;padding:0 0 0 26px;border-left:1px solid #a5b7a6;max-width:790px}.research-timeline li{position:relative;margin:0 0 32px}.research-timeline li:before{content:"";position:absolute;left:-32px;top:8px;width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid var(--paper)}.research-timeline .period{font-size:11px;color:var(--green);letter-spacing:.04em}.research-timeline h3{margin:7px 0 12px;font-size:19px}.research-timeline p{font-size:15px;line-height:2;margin:0 0 12px}.scope-bridge{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:25px 0 10px}.scope-bridge div{padding:18px;border-top:2px solid var(--green);background:#edf1e8}.scope-bridge b{display:block;font-size:13px}.scope-bridge span{display:block;font-size:12px;color:var(--muted);margin-top:8px}@media(max-width:600px){.scope-bridge{grid-template-columns:1fr}.research-timeline{padding-left:20px}.research-timeline li:before{left:-26px}.research-timeline h3{font-size:18px}}
+
+/* Keep the added history navigation readable on narrow screens. */
+@media(max-width:650px){.header-inner{flex-wrap:wrap;gap:9px}.header-links{width:100%;flex-wrap:wrap;gap:8px 16px}}
+.prose code{overflow-wrap:anywhere;word-break:break-all}
+@media(max-width:800px){.score-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.score-card{min-width:0}}
+@media(max-width:380px){.score-card strong{font-size:26px}}
+
+/* Public essay: a quiet single-column reading layout. */
+.layout{display:block;max-width:920px;padding:0 36px}.hero{padding:64px 0 38px}.hero h1{font-size:clamp(36px,5vw,61px)}.standfirst{max-width:760px}.prose{max-width:none;font-size:17px;line-height:2.05}.prose p{margin-bottom:24px}.chapter{padding:38px 0 5px}.chapter h2{font-size:27px;margin-bottom:23px}.chapter h3{font-size:20px;margin-top:32px}.figure{padding:22px;margin:32px 0;background:#fffefb}.prose .figure h3{font-size:17px;margin:0 0 16px}.figure figcaption{font-size:12px;line-height:1.9;margin-top:14px}.video-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.video-title{line-height:1.6}.media-controls label{font-size:12px}.spec{font-size:11px!important}.sources{margin-top:30px;border-top:1px solid var(--line)}.sources>p{font-size:13px;line-height:1.95;color:var(--muted)}.source-list{font-size:13px}.data-links{display:flex;flex-wrap:wrap;gap:10px 22px}.paper-image{max-width:100%}.figure>a{display:block}.legacy-anchor{scroll-margin-top:90px}.header-links a{font-size:12px}
+@media(max-width:800px){.layout{padding:0 20px}.hero{padding:38px 0 28px}.hero h1{font-size:clamp(34px,8.8vw,52px)}.prose{font-size:16px;line-height:2}.chapter{padding-top:28px}.chapter h2{font-size:23px}.figure{padding:14px;margin:27px 0}.figure figcaption{font-size:11px}.video-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}.video-grid.two{grid-template-columns:1fr}.still-grid{gap:10px}.still-grid b{font-size:11px}.header-inner{flex-wrap:nowrap}.header-links{width:auto}.sources .source-list{padding-left:20px;font-size:12px}}
+@media(max-width:380px){.layout{padding:0 16px}.header-inner{padding:11px 16px}.brand{font-size:12px}.header-links a{font-size:11px}.hero h1{font-size:33px}.prose{font-size:15px}.figure{padding:11px}.video-card .video-title{font-size:11px}}
+
+.hero .lead-thesis{max-width:760px;font-size:16px;line-height:1.95;margin:18px 0 0;color:var(--ink)}@media(max-width:800px){.hero .lead-thesis{font-size:15px;line-height:1.95}}
+.hero .meta{margin:0 0 20px}.hero .standfirst{margin:20px 0}.hero .opening-comparison{margin:22px 0}.opening-comparison .video-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.opening-comparison .comparison-controls{margin:14px 0 0}@media(max-width:800px){.opening-comparison .video-grid{gap:10px}.opening-comparison .media-controls{gap:8px}.opening-comparison .button{padding:8px 11px}}
+
+/* Keep the restoration and pixel-processing comparison aligned on small screens. */
+.pixel-comparison{max-width:100%;min-width:0}
+.table-scroll{width:100%;max-width:100%;overflow-x:auto;margin:25px 0}
+.table-scroll .method-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px;line-height:1.75}
+.table-scroll th,.table-scroll td{padding:12px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.table-scroll th{font-size:12px;color:var(--muted);font-weight:600;white-space:normal}
+.table-scroll th:first-child{width:23%}.table-scroll th:nth-child(2){width:39%}
+.table-scroll .method-table td:first-child{white-space:normal}
+.metric-pending{font-size:13px;color:var(--muted);line-height:1.8}
+.pending-figure .pending-art{min-height:110px;display:flex;align-items:center;justify-content:center;background:#f1f3ed;color:var(--muted);font-size:14px}
+.prose blockquote{margin:27px 0;padding:8px 0 8px 22px;border-left:3px solid var(--green);background:transparent;font-size:20px;line-height:1.85}
+.prose blockquote p{margin:0 0 12px}.prose blockquote p:last-child{margin-bottom:0;font-size:15px;color:var(--muted)}
+@media(max-width:600px){.table-scroll .method-table{font-size:12px}.table-scroll th,.table-scroll td{padding:10px 6px}.table-scroll th{font-size:11px}.prose blockquote{font-size:18px;padding-left:15px}.prose blockquote p:last-child{font-size:13px}}
+.pixel-comparison .video-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pixel-comparison .video-card,.pixel-comparison .media-controls,.pixel-comparison .comparison-controls{min-width:0}
+.pixel-comparison .video-title,.pixel-comparison .spec{overflow-wrap:anywhere}
+.pixel-comparison .media-controls label,.pixel-comparison .comparison-controls label{max-width:100%}
+.pixel-comparison select{max-width:100%}
+@media(max-width:800px){.pixel-comparison .video-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.pixel-comparison .media-controls{gap:7px}.pixel-comparison .button{padding:8px 10px}}
+@media(max-width:380px){.pixel-comparison .video-grid{gap:7px}.pixel-comparison .media-controls label{font-size:11px}}
+
+/* Each strip is one synchronized video containing all three camera views. */
+#jitter-videos{display:grid;grid-template-columns:minmax(0,1fr);gap:0;min-width:0;max-width:100%;border:1px solid var(--line)}
+.joined-view-labels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));text-align:center;font-size:12px;font-weight:600;padding:7px 0;background:#edf1e8;border:1px solid var(--line);border-bottom:0}
+.jitter-joined .video-card{position:relative;background:#14241e}
+.jitter-joined .video-card+.video-card{border-top:2px solid var(--white)}
+.jitter-joined .video-title{position:absolute;left:7px;top:7px;z-index:1;pointer-events:none;background:#14241edb;color:#fffefb;border-radius:2px;padding:1px 7px;margin:0;font-size:11px}
+.jitter-joined .video-card video{aspect-ratio:4/1}
+.jitter-joined .spec{display:none}
+@media(max-width:600px){.joined-view-labels{font-size:10px;padding:5px 0}.jitter-joined .video-title{left:4px;top:4px;font-size:9px;padding:0 4px}}
+.codec-still-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:25px}.codec-still-grid b,.first-frame-stills b{display:block;font-size:12px;line-height:1.7;margin-bottom:7px}.codec-still-grid img,.first-frame-stills img{display:block;width:100%;height:auto}.first-frame-stills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}@media(max-width:600px){.codec-still-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.first-frame-stills{gap:7px}.first-frame-stills b{font-size:10px}}
+
+.pipeline-flow{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.pipeline-stage{position:relative;min-width:0;padding:14px 11px 12px;border:1px solid var(--line);background:#f7f8f3;display:flex;flex-direction:column}
+.pipeline-stage.is-measured{background:#edf3e8;border-color:#c1d1bf}
+.pipeline-stage:not(:last-child)::after{content:"→";position:absolute;right:-12px;top:44%;width:12px;text-align:center;color:var(--green);font-size:13px;line-height:1;z-index:1}
+.pipeline-step{font-size:10px;letter-spacing:1px;color:var(--muted)}
+.prose .pipeline-stage h3{font-size:13px;line-height:1.65;margin:9px 0 10px;min-height:43px;overflow-wrap:anywhere}
+.prose .pipeline-stage p{font-size:11px;line-height:1.8;margin:0 0 16px;color:var(--muted)}
+.pipeline-score{margin-top:auto;padding-top:12px;border-top:1px solid #d8e0d2;min-height:78px;display:flex;flex-direction:column;justify-content:center}
+.pipeline-score strong{font-size:27px;line-height:1.2;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.pipeline-score span{font-size:10px;color:var(--muted);line-height:1.7;margin-top:5px}
+.pipeline-score .pipeline-score-pending{font-size:12px;margin:0}
+.chart-annotations{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.prose .chart-annotations h3{font-size:13px;margin:0 0 7px;line-height:1.6}
+.prose .chart-annotations p{font-size:12px;margin:0;line-height:1.85;color:var(--muted)}
+@media(max-width:700px){.pipeline-flow{grid-template-columns:1fr;gap:18px}.pipeline-stage{padding:12px 14px;display:grid;grid-template-columns:22px minmax(0,1fr) 94px;gap:3px 10px;align-items:center}.pipeline-step{grid-column:1;grid-row:1/3}.prose .pipeline-stage h3{grid-column:2;grid-row:1;font-size:13px;min-height:0;margin:0}.prose .pipeline-stage p{grid-column:2;grid-row:2;margin:2px 0 0;font-size:11px}.pipeline-score{grid-column:3;grid-row:1/3;margin:0;min-height:64px;padding:0 0 0 10px;border-top:0;border-left:1px solid #d8e0d2}.pipeline-score strong{font-size:25px}.pipeline-score span{font-size:9px}.pipeline-score .pipeline-score-pending{font-size:11px}.pipeline-stage:not(:last-child)::after{content:"↓";right:auto;top:auto;left:50%;bottom:-17px;height:16px;font-size:14px}.chart-annotations{grid-template-columns:1fr;gap:14px;margin-top:17px;padding-top:16px}}
+@media(max-width:380px){.pipeline-stage{grid-template-columns:16px minmax(0,1fr) 79px;gap:3px 7px;padding:11px 9px}.pipeline-score{padding-left:8px}.pipeline-score strong{font-size:23px}.prose .pipeline-stage h3{font-size:12px}}
+
+.media-error{font-size:12px;color:var(--rust);margin:8px 0 0}.media-error[hidden]{display:none}.figure .media-controls{margin:14px 0 0}
+
+/* Selected research cases: figures, synchronized three-view media and tasks. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.codec-case+.codec-case{margin-top:28px;padding-top:25px;border-top:1px solid var(--line)}
+.codec-case h4,.acwm-case h4{margin:0 0 15px;font-size:16px;line-height:1.6;font-weight:650}
+.codec-case-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.codec-version{min-width:0}.codec-label{font-size:10px;line-height:1.6;min-height:34px;color:var(--muted);margin-bottom:7px;overflow-wrap:anywhere}
+.codec-version img{display:block;width:100%;height:auto;border:1px solid var(--line)}
+.codec-scores{margin:10px 0 0;font-size:10px;line-height:1.6}.codec-scores>div+div{margin-top:8px}.codec-scores dt{color:var(--muted);overflow-wrap:anywhere}.codec-scores dd{margin:2px 0 0;font-size:17px;font-weight:650;font-variant-numeric:tabular-nums;color:var(--green)}
+.figure .instruction{font-size:12px;line-height:1.75;margin:0 0 18px;color:var(--ink);overflow-wrap:anywhere}.instruction>span{display:block;font-size:10px;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+.research-contrast-views,.research-contrast #jitter-videos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;border:0}
+.research-view-pair{min-width:0;display:grid;grid-template-columns:1fr;gap:10px}.research-view-pair h4{font-size:12px;font-weight:600;margin:0;color:var(--ink)}
+.research-contrast video,.acwm-case video{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;background:#1b2723}
+.research-contrast .video-title,.acwm-case .video-title{font-size:11px;line-height:1.5;margin:0 0 6px;color:var(--muted)}
+.research-seek{flex:1;min-width:80px;display:flex;align-items:center}.research-seek input{width:100%;min-width:0;margin:0;accent-color:var(--green);cursor:pointer}
+.research-time{font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
+.task-views{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.task-view{min-width:0}
+.acwm-examples{margin-top:25px}.acwm-case{margin-top:24px}.figure .case-observation{font-size:14px;line-height:1.9;color:var(--ink);margin:20px 0 0;padding-top:17px;border-top:1px solid var(--line)}
+.pipeline-stage.is-selection{border-style:dashed;background:#e4efd9}
+@media(max-width:680px){.codec-case-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}.codec-label{font-size:11px;min-height:0}.codec-scores>div{display:flex;justify-content:space-between;gap:6px;align-items:baseline}.codec-scores dt{font-size:10px}.codec-scores dd{font-size:15px;flex-shrink:0}.research-contrast-views,.research-contrast #jitter-videos{grid-template-columns:1fr;gap:21px}.research-view-pair{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.research-view-pair h4{grid-column:1/-1}.task-views{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.task-view[data-view="head"]{grid-column:1/-1}.research-time{font-size:10px}.figure .case-observation{font-size:13px}.research-contrast .media-controls,.acwm-case .media-controls{gap:8px}.research-contrast .button,.acwm-case .button{padding:8px 11px}}
+@media(max-width:380px){.codec-case-grid{gap:17px 9px}.codec-scores>div{display:block}.codec-scores dd{font-size:16px}.research-time{width:100%;text-align:right}.research-seek{min-width:60px}}
+
+/* Three full-frame comparisons share one timeline. */
+.opening-task-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.opening-task{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;align-content:start}
+.opening-task video{height:auto}
+.opening-task .opening-task-title{font-size:12px;line-height:1.6;margin:0;font-weight:650;min-height:38px;color:var(--ink)}
+.opening-task .video-title{font-size:11px;line-height:1.5;color:var(--muted);margin-bottom:6px;font-weight:500}
+.opening-comparison .media-controls{gap:9px}
+.opening-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:22px 0}
+.opening-score-card{display:flex;flex-direction:column;gap:8px;border-top:2px solid var(--green);padding-top:14px;min-width:0}
+.opening-score-card>span{font-size:12px;line-height:1.6;min-height:38px}
+.opening-score-card strong{font-size:23px;line-height:1.4;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.5px}
+.opening-score-card small{font-size:12px;color:var(--green)}
+@media(max-width:680px){.opening-task-grid{grid-template-columns:minmax(0,1fr);gap:22px}.opening-task{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.opening-task .opening-task-title{grid-column:1/-1;min-height:0}.opening-score-grid{grid-template-columns:minmax(0,1fr);gap:18px}.opening-score-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 12px}.opening-score-card>span{grid-column:1/-1;min-height:0}.opening-score-card small{align-self:center}.opening-comparison .button{padding:8px 10px}}
+
+/* Full historical metric figure, with an in-page enlarged view. */
+.history-chart-trigger{display:block;width:100%;padding:0;border:0;border-radius:0;background:transparent;cursor:zoom-in;text-align:left}
+.history-chart-trigger:hover{background:transparent}.history-chart-trigger img{display:block;width:100%;height:auto}
+.history-zoom-hint{margin-left:.6em;white-space:nowrap}
+.history-chart-dialog{width:min(96vw,1460px);max-width:96vw;max-height:94dvh;padding:0;border:1px solid var(--line);border-radius:7px;background:var(--white);color:var(--ink);overflow:hidden}
+.history-chart-dialog::backdrop{background:#14251ed1}.history-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 18px;border-bottom:1px solid var(--line);font-size:13px}
+.history-chart-scroll{max-height:calc(94dvh - 66px);overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y}
+.history-chart-scroll img{display:block;width:1400px;max-width:none;height:auto;margin:0 auto}
+@media(max-width:680px){.history-metric-figure{padding:14px}.history-chart-dialog{width:96vw;max-width:96vw;margin:auto}.history-dialog-header{padding:10px 12px;font-size:12px}.history-chart-scroll img{width:1200px}.history-zoom-hint{display:block;margin-left:0}}
+
+/* Editorial layout: a quiet reading column with wider evidence figures. */
+:root{--paper:#f8f7f3;--ink:#1d332b;--muted:#66736b;--line:#dce1d8;--green:#245f4b;--white:#fffefa}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+.header-inner{max-width:1144px;padding:15px 44px}.site-header{background:#f8f7f3f2!important}.brand{letter-spacing:.035em}.header-links{font-size:11px}
+.layout{max-width:1064px;padding:0 44px}.hero{padding:72px 0 34px;border-bottom:1px solid var(--line)}
+.hero h1{font-size:clamp(42px,5.4vw,72px);font-weight:650;line-height:1.2;letter-spacing:-.035em;max-width:960px;margin:23px 0 26px}
+.kicker{font-size:10px;letter-spacing:.16em}.hero .meta{font-size:12px;gap:12px 24px;margin:0;color:var(--muted)}
+.article-intro{padding-top:30px}.prose{max-width:none;font-size:17px;line-height:1.98}
+.prose p{max-width:760px;margin:0 auto 23px}.article-intro>p:first-child{font-size:18px;line-height:1.9}
+article{counter-reset:chapter}.chapter:not(.sources){counter-increment:chapter;padding:50px 0 4px}
+.chapter>h2{max-width:760px;margin:0 auto 26px;padding-top:24px;border-top:1px solid var(--line);font-size:28px;line-height:1.5;font-weight:650;letter-spacing:-.025em}
+.chapter:not(.sources)>h2::before{content:counter(chapter,decimal-leading-zero);display:inline-block;font-size:11px;letter-spacing:.08em;font-weight:500;color:#889487;margin-right:14px;vertical-align:middle}
+.chapter h3{max-width:760px;margin:31px auto 14px;font-size:19px;line-height:1.6;letter-spacing:-.01em}
+.figure{margin:30px 0 34px;padding:0;border:0;border-radius:0;background:transparent}
+.figure p{max-width:none}.figure figcaption{font-size:11px;line-height:1.7;margin-top:11px;color:var(--muted)}
+.rank-figure .paper-image{border:1px solid var(--line);border-radius:4px}.rank-figure figcaption{margin-top:8px}
+.opening-comparison,.research-contrast,.pixel-comparison,.acwm-case,#wa-video-figure{padding:18px;border:1px solid var(--line);border-radius:5px;background:var(--white)}
+.figure .media-controls{margin:14px 0 0}.button{border-radius:4px;padding:8px 13px;font-size:12px}.button.primary{box-shadow:0 1px 0 #193c2b10}.video-card video{border-radius:2px}
+.opening-score-grid{max-width:760px;margin:24px auto 28px}.opening-score-card{border-top-width:1px}.opening-score-card strong{font-size:26px;letter-spacing:-.035em}
+.history-chart-trigger{max-width:860px;margin:0 auto}.history-metric-figure figcaption{max-width:860px;margin:10px auto 0}.history-chart-trigger img{border-radius:4px}
+.codec-cases{padding:14px 16px 12px;background:var(--white);border:1px solid var(--line);border-radius:5px}
+.codec-matrix-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+.codec-matrix{width:100%;min-width:720px;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12px;line-height:1.6;font-variant-numeric:tabular-nums}
+.codec-matrix th,.codec-matrix td{border:0;text-align:center;vertical-align:middle;white-space:normal}
+.codec-matrix thead th{padding:9px 6px;background:#f0f4ed;font-size:11px;line-height:1.6;font-weight:550;color:var(--green);border-bottom:1px solid var(--line)}
+.codec-matrix thead th:first-child{width:100px;text-align:left;font-size:10px;color:var(--muted);font-weight:450}
+.codec-matrix .codec-task-title th{text-align:left;background:transparent;font-size:13px;line-height:1.6;font-weight:600;padding:14px 0 8px;color:var(--ink)}
+.codec-matrix tbody+tbody .codec-task-title th{border-top:1px solid var(--line);padding-top:17px}
+.codec-matrix .codec-frame-row th{text-align:left;padding:4px 0 7px;background:transparent;font-size:10px;font-weight:450;color:var(--muted)}
+.codec-matrix .codec-frame-row td{padding:3px 5px 7px}.codec-matrix img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;border-radius:2px}
+.codec-matrix .codec-metric-row th{padding:3px 0;text-align:left;background:transparent;font-size:11px;font-weight:450;color:var(--muted)}
+.codec-matrix .codec-metric-row td{padding:3px 5px;color:var(--green);font-size:13px;font-weight:550}.codec-matrix tbody tr:last-child td,.codec-matrix tbody tr:last-child th{padding-bottom:14px}
+.codec-cases figcaption{padding-top:8px;margin-top:5px;border-top:1px solid var(--line)}
+.pipeline-flow{gap:12px}.pipeline-stage{background:#f0f4eb;border-color:#d6dfd0;border-radius:4px}.pipeline-stage.is-selection{background:#e8efe0}.pipeline-score strong{font-size:30px}.pipeline-score{border-color:#d5decd}
+.autowm-figure>.paper-image,.autowm-figure>a>.paper-image{border-radius:4px}.chart-annotations{gap:24px}.prose .chart-annotations p{font-size:12px;line-height:1.8}
+.sources{max-width:760px;margin:42px auto 0;padding-top:0;border-top:0}.sources>h2{padding-top:25px;font-size:23px}.source-list{font-size:12px;line-height:1.85}.source-list li{margin:12px 0}.footer{font-size:11px;margin-top:24px}
+@media(max-width:800px){.layout{padding:0 24px}.header-inner{padding:13px 24px}.hero{padding:44px 0 28px}.hero h1{font-size:clamp(36px,7.6vw,58px);line-height:1.23}.hero .meta{font-size:11px;gap:8px 17px}.article-intro{padding-top:24px}.prose{font-size:16px;line-height:1.98}.prose p{margin-bottom:21px}.article-intro>p:first-child{font-size:17px}.chapter:not(.sources){padding-top:38px}.chapter>h2{font-size:24px;margin-bottom:23px;padding-top:22px}.chapter h3{font-size:18px;margin-top:28px}.chapter:not(.sources)>h2::before{font-size:10px;margin-right:11px}.opening-comparison,.research-contrast,.pixel-comparison,.acwm-case,#wa-video-figure{padding:14px}.figure{margin:26px 0 30px}.codec-cases{padding:11px 12px}.codec-matrix{min-width:680px}.codec-matrix thead th:first-child{width:88px}.pipeline-score strong{font-size:26px}.history-metric-figure{padding:0}.sources{margin-top:35px}}
+@media(max-width:480px){.layout{padding:0 18px}.header-inner{padding:12px 18px}.hero h1{font-size:clamp(32px,8.5vw,40px);letter-spacing:-.025em}.kicker{font-size:9px;letter-spacing:.11em}.hero .meta{font-size:10px;gap:7px 13px}.prose{font-size:15px;line-height:1.98}.article-intro>p:first-child{font-size:16px}.chapter>h2{font-size:22px}.figure figcaption{font-size:10px}.codec-cases{padding:9px}.pipeline-score strong{font-size:24px}.opening-score-card strong{font-size:24px}}
+@media print{.layout{max-width:none;padding:0}.prose p,.chapter>h2,.chapter h3{max-width:none}.figure{break-inside:avoid}.codec-matrix{min-width:0}.hero{padding-top:0}}
+
+/* Brand signature above the article title; preserve the supplied artwork. */
+.hero-brand{width:360px;max-width:86%;aspect-ratio:1944/208;position:relative;overflow:hidden;margin:0 0 30px}
+.hero-brand img{position:absolute;display:block;width:105.35%;max-width:none;height:auto;left:-2.68%;top:-25%}
+@media(max-width:800px){.hero-brand{width:300px;margin-bottom:26px}}
+@media(max-width:480px){.hero-brand{width:268px;max-width:88%;margin-bottom:24px}}
+
+/* Keep the five stage scores aligned and external examples compact. */
+.pipeline-stage{display:grid;grid-template-rows:16px 42px 72px;gap:7px;padding:13px 11px}
+.prose .pipeline-stage h3{align-self:start;min-height:0;margin:0;font-size:13px;line-height:1.6}
+.pipeline-score{align-self:stretch;margin:0;min-height:0;padding-top:12px;justify-content:flex-start}
+.pipeline-score span{white-space:nowrap;font-size:10px}
+.pipeline-stage:not(:last-child)::after{top:50%}
+#wa-video-figure{padding:14px}
+.prose #wa-video-figure>h3{font-size:14px;margin:0 0 10px}
+#wa-video-figure>.video-grid.four{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+#wa-video-figure .video-title{font-size:11px;margin-bottom:5px}
+#wa-video-figure .media-controls{margin-top:10px}
+#wa-video-figure figcaption{margin-top:10px}
+@media(max-width:700px){.pipeline-flow{gap:18px}.pipeline-stage{grid-template-columns:22px minmax(0,1fr) 94px;grid-template-rows:56px;gap:10px;align-items:center;padding:10px 13px}.pipeline-step,.prose .pipeline-stage h3,.pipeline-score{grid-row:1}.prose .pipeline-stage h3{align-self:center}.pipeline-score{padding:0 0 0 10px;justify-content:center}.pipeline-score span{font-size:9px}.pipeline-stage:not(:last-child)::after{top:auto}}
+@media(max-width:600px){#wa-video-figure>.video-grid.four{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
+@media(max-width:380px){.pipeline-stage{grid-template-columns:16px minmax(0,1fr) 79px;gap:7px;padding:10px 9px}.pipeline-score{padding-left:8px}.prose .pipeline-stage h3{font-size:12px}}
+
+.compact-metric-figure{max-width:760px;margin:22px auto 27px;padding:0;border:0;background:transparent}
+.compact-table-scroll{max-width:100%;overflow-x:auto}
+.compact-metric-table{font-size:13px;line-height:1.6;table-layout:fixed}
+.compact-metric-table th,.compact-metric-table td{padding:10px 12px;text-align:right;white-space:normal}
+.compact-metric-table th:first-child{width:58%;text-align:left}
+.compact-metric-table thead th{font-size:11px;color:var(--muted);font-weight:500;background:#edf1e8}
+.compact-metric-table tbody th{font-weight:450;background:transparent;overflow-wrap:anywhere}
+.compact-metric-table tbody tr:last-child th,.compact-metric-table tbody tr:last-child td{border-bottom:0}
+.compact-metric-table .metric-after{font-weight:650;color:var(--green)}
+.compact-metric-figure figcaption{font-size:10px;margin-top:7px}
+.firstframe-evidence-strip{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.figure .firstframe-evidence-strip>p{font-size:11px;color:var(--muted);margin:0 0 9px}
+.firstframe-evidence-strip .first-frame-stills{margin-bottom:0}
+.opening-reveal{margin:20px 0 4px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0}
+.opening-reveal>summary{font-size:13px;line-height:1.7;color:var(--green);font-weight:550;list-style-position:inside}
+.opening-reveal-content{padding-top:22px}
+.prose .opening-reveal-content>p{font-size:15px;line-height:1.95;margin-bottom:18px}
+.opening-reveal .opening-score-grid{margin:18px 0 22px}
+.opening-reveal .opening-score-card strong{font-size:25px}
+.wa-metric-block{max-width:760px;margin:17px auto 0;padding-top:12px;border-top:1px solid var(--line)}
+.worldarena-metric-table th:first-child{width:40%}
+.worldarena-metric-table th,.worldarena-metric-table td{padding:8px 9px;font-size:12px}
+.worldarena-metric-table thead th{font-size:10px}
+@media(max-width:600px){.compact-metric-table{font-size:11px}.compact-metric-table th,.compact-metric-table td{padding:9px 6px}.compact-metric-table th:first-child{width:48%}.compact-metric-table thead th{font-size:10px}.firstframe-evidence-strip{margin-top:14px;padding-top:12px}.prose .opening-reveal-content>p{font-size:14px}.opening-reveal .opening-score-card strong{font-size:23px}}
+@media(max-width:600px){.worldarena-metric-table th:first-child{width:39%}.worldarena-metric-table th,.worldarena-metric-table td{padding:8px 4px;font-size:9px}.worldarena-metric-table thead th{font-size:9px}}
+
+/* Keep comparison labels readable when tables need horizontal scrolling. */
+.figure .matrix-scroll-hint{font-size:11px;line-height:1.6;color:var(--muted);margin:0 0 9px;text-align:right}
+.matrix-scroll-hint[hidden]{display:none}
+.codec-task-name{position:sticky;left:0;display:inline-block;max-width:calc(100vw - 80px);background:var(--white);z-index:3}
+.codec-matrix thead th:first-child,.codec-matrix .codec-frame-row th,.codec-matrix .codec-metric-row th{position:sticky;left:0;z-index:2;background:var(--white);box-shadow:1px 0 0 var(--line)}
+.codec-matrix thead th:first-child{z-index:3;background:#f0f4ed}
+.hero h1 em{display:inline-block;white-space:nowrap}
+@media(max-width:720px){
+  .worldarena-metric-table{min-width:520px}
+  .worldarena-metric-table th:first-child{width:156px;position:sticky;left:0;z-index:2;background:var(--white);box-shadow:1px 0 0 var(--line)}
+  .worldarena-metric-table th,.worldarena-metric-table td{font-size:12px;padding:9px 10px;white-space:nowrap}
+  .worldarena-metric-table thead th{font-size:11px}
+  .worldarena-metric-table thead th:first-child{z-index:3;background:#edf1e8}
+}
+@media(max-width:359px){.hero h1{font-size:29px;line-height:1.28}}
+
+/* One shared reading column for prose, headings and evidence. */
+:root{--article-width:860px;--article-gutter:32px}
+.layout,.header-inner{width:100%;max-width:calc(var(--article-width) + 2 * var(--article-gutter));padding-left:var(--article-gutter);padding-right:var(--article-gutter);margin-left:auto;margin-right:auto}
+.prose,.prose p,.chapter>h2,.chapter h3,.sources{max-width:none}
+.prose p,.chapter>h2,.chapter h3{margin-left:0;margin-right:0}
+.figure{width:100%;max-width:100%;margin-left:0;margin-right:0}
+.history-chart-trigger,.history-metric-figure figcaption,.compact-metric-figure,.opening-score-grid,.wa-metric-block,.sources{width:100%;max-width:100%;margin-left:0;margin-right:0}
+@media(max-width:800px){:root{--article-gutter:24px}}
+@media(max-width:480px){:root{--article-gutter:18px}}
+
+/* Keep each video experiment and its scores in one visual group. */
+.research-contrast:has(+ .compact-metric-figure){margin-bottom:0;border-bottom:0;border-radius:5px 5px 0 0;padding-bottom:16px}
+.research-contrast + .compact-metric-figure{margin-top:0;padding:0 18px 16px;border:1px solid var(--line);border-top:0;border-radius:0 0 5px 5px;background:var(--white)}
+.research-contrast + .compact-metric-figure .compact-table-scroll{padding-top:14px;border-top:1px solid var(--line)}
+.subsection + .subsection{margin-top:32px}
+.chapter>.prose>p:last-child,.subsection>p:last-child{margin-bottom:0}
+@media(max-width:800px){.research-contrast + .compact-metric-figure{padding:0 14px 14px}.subsection + .subsection{margin-top:26px}}
+</style><meta name="referrer" content="no-referrer"></head><body><a href="#article" class="skip">跳转到文章</a><header class="site-header"><div class="header-inner"><a class="brand" href="#article">Cogito · 研究笔记</a><nav class="header-links" aria-label="文章导航"><a href="#sources">参考资料</a></nav></div><div class="progress" id="reading-progress"></div></header><main class="layout"><article id="article"><header class="hero"><div class="kicker">世界模型 · 评测 · 研究反思</div><h1>我们把世界模型的<br>分数刷高了，<em>然后呢？</em></h1><div class="meta"><span>2026年11月13日更新</span></div></header><div class="prose article-intro">
+<p>截至2026年11月13日，Cogito 在 TriWorldBench 已发布的69个模型中排名第1，TWB-Score 为72.94。我们需要直说：这份成绩中包含<strong>metric hacking</strong>的收益。我们针对评分信号处理输出、调整像素，并筛选更容易得到高分的候选。其中多项操作不需要重新训练生成模型，也不要求模型学会更准确地预测动作后果。当这些操作可以显著提高成绩，世界模型榜单究竟在衡量什么？这篇文章公开我们的提分过程，也把这个问题摆到台面上。</p>
+<figure class="figure rank-figure" id="ranking-result"><a href="./assets/leaderboard-top10.png?v=20261113" target="_blank" rel="noopener"><img class="paper-image" src="./assets/leaderboard-top10.png?v=20261113" alt="TriWorldBench榜单前10名，Cogito排名第1、总分72.94，据官方榜单整理，2026年11月13日核对" width="1820" height="920" fetchpriority="high" loading="eager"></a></figure>
+<p>TriWorldBench 是一项面向机器人操作的三视角世界模型评测，由北京大学、清华大学、北京航空航天大学、上海交通大学、中国科学技术大学和上海人工智能实验室的研究者共同提出。<a href="#ref-1" class="citation">[1]</a> 它基于 RoboTwin 2.0的50项双臂操作任务，设有500条测试轨迹：给定初始画面、任务指令和动作序列，模型需要预测头部、左腕和右腕三个相机接下来会看到什么。</p>
+<p>头部视角呈现整体操作，腕部视角补充夹爪附近的接触和抓取细节。三路预测需要对应同一次操作：不能一边显示物体已被拿起，另一边却显示夹爪空握。评测通过六个维度、19项指标考察任务、运动、画质及跨视角一致性等表现，汇总为用于排名的 TWB-Score。</p>
+<p id="opening-question">世界模型的价值在于帮助机器人预判动作后果，辅助规划与控制。然而，这类评测混合了两种能力：预测动作后果的能力，以及针对评分器优化输出的能力。要把排名解释为模型能力的高低，评测就需要分清两者。先看下面三组视频：每组两段，你觉得哪一段更好？它们的指标得分又会相差多少？</p>
+<figure class="figure opening-comparison" id="own-video-figure" data-opening-comparison><div class="opening-task-grid" id="own-videos"><section class="opening-task"><p class="opening-task-title">依次抓起两瓶饮料</p><div class="video-card"><div class="video-title">第一段视频</div><video playsinline muted preload="none" width="320" height="240" data-fps="30" data-frames="126" aria-label="第一段视频" src="./blog/score-hacking-assets/opening-episode37-base-head.mp4" poster="./blog/score-hacking-assets/opening-episode37-base-head-poster.png">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">第二段视频</div><video playsinline muted preload="none" width="320" height="240" data-fps="30" data-frames="126" aria-label="第二段视频" src="./blog/score-hacking-assets/opening-episode37-final-head.mp4" poster="./blog/score-hacking-assets/opening-episode37-final-head-poster.png">浏览器不支持视频播放。</video></div></section><section class="opening-task"><p class="opening-task-title">将蓝色杯子放到木杯垫上</p><div class="video-card"><div class="video-title">第一段视频</div><video playsinline muted preload="none" width="320" height="240" data-fps="30" data-frames="170" aria-label="第一段视频" src="./blog/score-hacking-assets/opening-episode59-base-head.mp4" poster="./blog/score-hacking-assets/opening-episode59-base-head-poster.png">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">第二段视频</div><video playsinline muted preload="none" width="320" height="240" data-fps="30" data-frames="170" aria-label="第二段视频" src="./blog/score-hacking-assets/opening-episode59-final-head.mp4" poster="./blog/score-hacking-assets/opening-episode59-final-head-poster.png">浏览器不支持视频播放。</video></div></section><section class="opening-task"><p class="opening-task-title">双臂抬起灰色锅</p><div class="video-card"><div class="video-title">第一段视频</div><video playsinline muted preload="none" width="320" height="240" data-fps="30" data-frames="108" aria-label="第一段视频" src="./blog/score-hacking-assets/opening-episode23-base-head.mp4" poster="./blog/score-hacking-assets/opening-episode23-base-head-poster.png">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">第二段视频</div><video playsinline muted preload="none" width="320" height="240" data-fps="30" data-frames="108" aria-label="第二段视频" src="./blog/score-hacking-assets/opening-episode23-final-head.mp4" poster="./blog/score-hacking-assets/opening-episode23-final-head-poster.png">浏览器不支持视频播放。</video></div></section></div><div class="media-controls"><button class="button primary" id="own-play" data-play-label="三组一起播放">三组一起播放</button><label class="research-seek"><span class="sr-only">同步播放进度</span><input type="range" min="0" max="1000" value="0" step="1" id="own-seek" aria-label="同步播放进度"></label><output id="own-time" class="research-time">0:00 / 0:06</output></div><p class="media-error" id="own-status" role="status" hidden></p><figcaption>三组头部视角对照。</figcaption></figure>
+<details class="opening-reveal" id="opening-reveal"><summary>查看评分与处理方式</summary><div class="opening-reveal-content">
+<p>每组第一段是原始生成，第二段经过了输出处理和 Best-of-N 筛选。动作过程和物体位置看起来接近，纹理、锐度等细节有所变化，指标均分却分别提高了17.34、15.97和13.46分。</p>
+<div class="opening-score-grid" aria-label="三条轨迹的18项指标等权均分"><div class="opening-score-card"><span>依次抓起两瓶饮料</span><strong>67.80 → 85.14</strong><small>+17.34 分</small></div><div class="opening-score-card"><span>将蓝色杯子放到木杯垫上</span><strong>68.17 → 84.14</strong><small>+15.97 分</small></div><div class="opening-score-card"><span>双臂抬起灰色锅</span><strong>61.83 → 75.29</strong><small>+13.46 分</small></div></div>
+<p>这里统计的是每条轨迹18项指标的等权均分，各指标按评测规则使用对应视角，不含整组计算的 JEPA Similarity，区别于官方 TWB-Score。分差从哪里来，又能说明什么？下面展开来看。</p>
+</div></details>
+</div>
+<section class="chapter" id="research-history"><h2>从改进模型，到检查评分器</h2>
+<div class="prose">
+<p>最初，我们沿着常规路线改进 Cogito，希望它更准确地预测机器人动作的后果。在模型设计上，我们比较了不同视频生成骨干与微调方式，尝试控制视频、光流和动作几何等条件输入，并引入跨视角特征交互与相机几何，建立头部和双腕画面之间的空间对应。</p>
+<p>针对长时序预测，我们探索了初始帧锚点、近期历史和稀疏长期记忆，调整分段生成与窗口衔接方式，以减少物体身份丢失和累积误差。训练方面，我们对比不同数据配比、采样方式和输入分辨率，也尝试分区时序约束与片段交界处的运动边界损失。</p>
+<p>这些尝试带来过改善，但收益并不总是稳定。分区时序损失在小样本实验中表现更好，扩大对照后却没有稳定优于普通微调；一些画面恢复处理提高了图像质量评分，时间一致性评分却有所下降。数据与训练条件也常常一起变化，很难仅凭一次涨分判断哪项改动有效。</p>
+<p>为了看清这些分数的含义，我们将100条验证轨迹的真实参考视频（GT）同时作为预测与参考，完成 GT→GT 自评；同时整理四期测试集榜单存档，计算每期存档中前三条目的19项指标均值。下图按测试集首末两期的分差排序，将验证集 GT→GT 列为独立参照。真实视频的得分并不必然是各项指标的理论上限。</p>
+<span id="historical-metrics" class="legacy-anchor"></span><figure class="figure history-metric-figure" id="historical-metric-changes"><button class="history-chart-trigger" id="history-chart-open" type="button" aria-label="放大历史榜单指标图" aria-haspopup="dialog" aria-controls="history-chart-dialog"><img class="paper-image" src="./blog/score-hacking-assets/historical-metric-trends-with-gt.png" loading="lazy" alt="测试集四期榜单存档前三均值、100条验证轨迹的GT→GT自评分数，以及测试集首末分差，按该分差排序。四期日期为9月11日、9月28日、10月19日和11月3日。"></button><figcaption>测试集：四期存档前三均值及首末分差。GT→GT：100条验证轨迹自评，按时长分桶加权（VQA Consistency有效96条）。</figcaption><dialog class="history-chart-dialog" id="history-chart-dialog" aria-labelledby="history-chart-title"><div class="history-dialog-header"><span id="history-chart-title">测试集历史榜单与验证集GT对照</span><button class="button" id="history-chart-close" type="button" aria-label="关闭完整图">关闭</button></div><div class="history-chart-scroll"><img src="./blog/score-hacking-assets/historical-metric-trends-with-gt.png" loading="lazy" alt="测试集四期榜单19项均值、验证集GT自评与测试集首末分差"></div></dialog></figure>
+<p>首末两期相比，19项指标中有13项上升、6项下降。Photometric Smoothness、Trajectory Accuracy 增幅较大，Instruction Following 变化较小，Interaction Quality 略有下降。各期前三名并非同一批模型，因此这些变化不能直接归因于某项训练或推理改进。</p>
+<p>前一次提交后，我们把注意力转向评分器，专门花了两周探索 metric hacking，为这次提交调整输出处理与筛选流程。问题也变得更直接：<strong>固定一批生成结果，只改变输出视频，分数究竟能被推高多少？</strong></p>
+</div></section>
+<section class="chapter" id="own-results"><h2>三个对照，检查评分器的响应</h2>
+<div class="prose">
+<p>我们先从编码、整帧位移和首帧调整入手，逐项检查画面变化与评分反馈是否一致。</p>
+<section class="subsection" id="codec-evidence"><h3>1．编码不同，单条轨迹评分就能大幅波动</h3>
+<p>从同一批 RGB 母版出发，我们分别输出 H.264 YUV420 CRF10、H.264 RGB CRF0、HEVC CRF0、H.264 YUV420 CRF0和 AV1 CRF0五个版本，比较不同编码与色彩采样设置下的评分。</p>
+<figure class="figure codec-cases" id="codec-comparison" data-horizontal-table><p class="matrix-scroll-hint" data-scroll-hint hidden>左右滑动查看完整对照 →</p><div class="codec-matrix-scroll" data-table-scroll role="region" aria-label="三条轨迹的编码对照" tabindex="0"><table class="codec-matrix"><thead><tr><th scope="col">编码</th><th scope="col">H.264 YUV420 CRF10</th><th scope="col">H.264 RGB CRF0</th><th scope="col">HEVC CRF0</th><th scope="col">H.264 YUV420 CRF0</th><th scope="col">AV1 CRF0</th></tr></thead><tbody data-codec-case="episode60"><tr class="codec-task-title"><th colspan="6"><span class="codec-task-name">把蓝色杯子放到灰色木杯垫上</span></th></tr><tr class="codec-frame-row"><th scope="row">头部画面</th><td><a href="./blog/score-hacking-assets/codec-case-episode60-raw.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode60-raw.png" width="320" height="240" loading="lazy" alt="把蓝色杯子放到灰色木杯垫上，H.264 YUV420 CRF10"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode60-rgb0.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode60-rgb0.png" width="320" height="240" loading="lazy" alt="把蓝色杯子放到灰色木杯垫上，H.264 RGB CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode60-hevc0.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode60-hevc0.png" width="320" height="240" loading="lazy" alt="把蓝色杯子放到灰色木杯垫上，HEVC CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode60-yuv4200.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode60-yuv4200.png" width="320" height="240" loading="lazy" alt="把蓝色杯子放到灰色木杯垫上，H.264 YUV420 CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode60-av10.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode60-av10.png" width="320" height="240" loading="lazy" alt="把蓝色杯子放到灰色木杯垫上，AV1 CRF0"></a></td></tr><tr class="codec-metric-row"><th scope="row">轨迹准确性</th><td>18.67</td><td>20.38</td><td>87.52</td><td>10.04</td><td>20.38</td></tr><tr class="codec-metric-row"><th scope="row">图像质量</th><td>42.21</td><td>42.80</td><td>59.43</td><td>40.33</td><td>42.86</td></tr></tbody><tbody data-codec-case="episode47"><tr class="codec-task-title"><th colspan="6"><span class="codec-task-name">把面包转移到深色圆锅中</span></th></tr><tr class="codec-frame-row"><th scope="row">头部画面</th><td><a href="./blog/score-hacking-assets/codec-case-episode47-raw.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode47-raw.png" width="320" height="240" loading="lazy" alt="把面包转移到深色圆锅中，H.264 YUV420 CRF10"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode47-rgb0.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode47-rgb0.png" width="320" height="240" loading="lazy" alt="把面包转移到深色圆锅中，H.264 RGB CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode47-hevc0.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode47-hevc0.png" width="320" height="240" loading="lazy" alt="把面包转移到深色圆锅中，HEVC CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode47-yuv4200.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode47-yuv4200.png" width="320" height="240" loading="lazy" alt="把面包转移到深色圆锅中，H.264 YUV420 CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode47-av10.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode47-av10.png" width="320" height="240" loading="lazy" alt="把面包转移到深色圆锅中，AV1 CRF0"></a></td></tr><tr class="codec-metric-row"><th scope="row">轨迹准确性</th><td>100.00</td><td>12.08</td><td>9.56</td><td>99.54</td><td>12.08</td></tr><tr class="codec-metric-row"><th scope="row">图像质量</th><td>55.74</td><td>36.17</td><td>35.71</td><td>55.73</td><td>36.17</td></tr></tbody><tbody data-codec-case="episode62"><tr class="codec-task-title"><th colspan="6"><span class="codec-task-name">把白色风扇放到酒红色垫子上</span></th></tr><tr class="codec-frame-row"><th scope="row">头部画面</th><td><a href="./blog/score-hacking-assets/codec-case-episode62-raw.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode62-raw.png" width="320" height="240" loading="lazy" alt="把白色风扇放到酒红色垫子上，H.264 YUV420 CRF10"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode62-rgb0.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode62-rgb0.png" width="320" height="240" loading="lazy" alt="把白色风扇放到酒红色垫子上，H.264 RGB CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode62-hevc0.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode62-hevc0.png" width="320" height="240" loading="lazy" alt="把白色风扇放到酒红色垫子上，HEVC CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode62-yuv4200.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode62-yuv4200.png" width="320" height="240" loading="lazy" alt="把白色风扇放到酒红色垫子上，H.264 YUV420 CRF0"></a></td><td><a href="./blog/score-hacking-assets/codec-case-episode62-av10.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/codec-case-episode62-av10.png" width="320" height="240" loading="lazy" alt="把白色风扇放到酒红色垫子上，AV1 CRF0"></a></td></tr><tr class="codec-metric-row"><th scope="row">轨迹准确性</th><td>20.76</td><td>37.01</td><td>84.95</td><td>100.00</td><td>37.01</td></tr><tr class="codec-metric-row"><th scope="row">图像质量</th><td>37.48</td><td>41.35</td><td>52.37</td><td>56.12</td><td>41.35</td></tr></tbody></table></div><figcaption>不同编码下的画面与分项得分。</figcaption></figure>
+<p>五种编码在整组100条轨迹上的综合分介于66.11至66.89，整体分数接近，但单条轨迹的评分会大幅波动。例如，“把蓝色杯子放到灰色木杯垫上”这条轨迹，从 H.264 YUV420 CRF10改为 HEVC CRF0后，Trajectory Accuracy 从18.67升至87.52；其他轨迹中也有明显下降的情况。</p>
+<p>编码改变了像素，画质评分随之变化并不意外。但轨迹评分也出现如此大的分差，暴露了它对像素变化的敏感性。整组平均分接近，掩盖不了单条轨迹上的巨大波动。用于判断动作轨迹是否准确的指标，为什么会对编码变化产生如此剧烈的反应？</p>
+</section>
+<span class="legacy-anchor" id="rollback-evidence"></span>
+<section class="subsection" id="motion-evidence"><h3>2．加入无关晃动，运动评分反而上升</h3>
+<p>在拉开微波炉这条轨迹中，我们对左右腕画面加入幅度为2.5像素的周期性整帧位移，并重新编码，头部视频保持不变。桌面、夹爪和物体随画面一起晃动。</p>
+<figure class="figure research-contrast" id="jitter-comparison" data-synced-group="jitter"><p class="instruction"><span>Instruction</span>Pull the handle to open the microwave for heating food.</p><div class="research-contrast-views" id="jitter-videos"><section class="research-view-pair" data-view="head"><h4>头部视角</h4><div class="video-card"><div class="video-title">处理前</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="1023" aria-label="处理前" src="./blog/score-hacking-assets/motion-episode36-before-head.mp4" poster="./blog/score-hacking-assets/motion-episode36-before-head-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">处理后</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="1023" aria-label="处理后" src="./blog/score-hacking-assets/motion-episode36-after-head.mp4" poster="./blog/score-hacking-assets/motion-episode36-after-head-poster.jpg">浏览器不支持视频播放。</video></div></section><section class="research-view-pair" data-view="left"><h4>左腕视角</h4><div class="video-card"><div class="video-title">处理前</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="1023" aria-label="处理前" src="./blog/score-hacking-assets/motion-episode36-before-left.mp4" poster="./blog/score-hacking-assets/motion-episode36-before-left-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">处理后</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="1023" aria-label="处理后" src="./blog/score-hacking-assets/motion-episode36-after-left.mp4" poster="./blog/score-hacking-assets/motion-episode36-after-left-poster.jpg">浏览器不支持视频播放。</video></div></section><section class="research-view-pair" data-view="right"><h4>右腕视角</h4><div class="video-card"><div class="video-title">处理前</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="1023" aria-label="处理前" src="./blog/score-hacking-assets/motion-episode36-before-right.mp4" poster="./blog/score-hacking-assets/motion-episode36-before-right-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">处理后</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="1023" aria-label="处理后" src="./blog/score-hacking-assets/motion-episode36-after-right.mp4" poster="./blog/score-hacking-assets/motion-episode36-after-right-poster.jpg">浏览器不支持视频播放。</video></div></section></div><div class="media-controls"><button class="button primary" id="jitter-play" data-play-label="播放对照">播放对照</button><label class="research-seek"><span class="sr-only">同步播放进度</span><input type="range" min="0" max="1000" value="0" step="1" id="jitter-seek" aria-label="同步播放进度"></label><output id="jitter-time" class="research-time">0:00 / 0:34</output></div><p class="media-error" id="jitter-status" role="status" hidden></p><figcaption>拉开微波炉：三视角处理前后对照。</figcaption></figure>
+<figure class="figure compact-metric-figure" id="e87-metric-comparison"><div class="compact-table-scroll"><table class="compact-metric-table"><thead><tr><th scope="col">指标</th><th scope="col">处理前</th><th scope="col">处理后</th></tr></thead><tbody><tr><th scope="row">Background Consistency</th><td>2.87</td><td class="metric-after">61.59</td></tr><tr><th scope="row">Photometric Smoothness</th><td>5.65</td><td class="metric-after">55.66</td></tr><tr><th scope="row">Flow Score</th><td>2.81</td><td class="metric-after">27.83</td></tr></tbody></table></div><figcaption>该轨迹三视角汇总。</figcaption></figure>
+<p>在整组100条轨迹上，Background Consistency 从73.76升到85.76，Photometric Smoothness 从30.71升到40.65，Flow Score 从23.91升到28.89；全局 JEPA Similarity 则从85.94降到77.48。</p>
+<p>这种与任务无关的平移没有补充抓取或接触信息，评分却给出了正向反馈。公开实现中，Background Consistency 和 Photometric Smoothness 会惩罚低运动视频，人为晃动可能减轻这类惩罚；Flow Score 则会响应额外的光流。<a href="#ref-2" class="citation">[2]</a> 我们核对的公开版本也实现了依据状态数据（state）中预期运动占比修正一致性的逻辑，但这套修正未进入默认汇总结果。如果无意义的晃动能够减轻低运动惩罚，评分规则就在为错误的优化方向提供激励。真实场景需要的是该动时动、该静时静。</p>
+</section>
+<section class="subsection" id="first-frame"><h3>3．未来动作不变，一致性评分仍会提高</h3>
+<p>如果后续可见的动作过程完全不变，分数还会提高吗？第三组对照选取打开抽屉、放入面包的轨迹，轻微调整三个视角的首帧，后续解码 RGB 画面与时间戳保持不变。</p>
+<figure class="figure research-contrast" id="firstframe-video-comparison" data-synced-group="firstframe"><div class="research-contrast-views" id="firstframe-videos"><section class="research-view-pair" data-view="head"><h4>头部视角</h4><div class="video-card"><div class="video-title">处理前</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="270" aria-label="处理前" src="./blog/score-hacking-assets/firstframe-episode80-before-head.mp4" poster="./blog/score-hacking-assets/firstframe-episode80-before-head-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">处理后</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="270" aria-label="处理后" src="./blog/score-hacking-assets/firstframe-episode80-after-head.mp4" poster="./blog/score-hacking-assets/firstframe-episode80-after-head-poster.jpg">浏览器不支持视频播放。</video></div></section><section class="research-view-pair" data-view="left"><h4>左腕视角</h4><div class="video-card"><div class="video-title">处理前</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="270" aria-label="处理前" src="./blog/score-hacking-assets/firstframe-episode80-before-left.mp4" poster="./blog/score-hacking-assets/firstframe-episode80-before-left-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">处理后</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="270" aria-label="处理后" src="./blog/score-hacking-assets/firstframe-episode80-after-left.mp4" poster="./blog/score-hacking-assets/firstframe-episode80-after-left-poster.jpg">浏览器不支持视频播放。</video></div></section><section class="research-view-pair" data-view="right"><h4>右腕视角</h4><div class="video-card"><div class="video-title">处理前</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="270" aria-label="处理前" src="./blog/score-hacking-assets/firstframe-episode80-before-right.mp4" poster="./blog/score-hacking-assets/firstframe-episode80-before-right-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">处理后</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="270" aria-label="处理后" src="./blog/score-hacking-assets/firstframe-episode80-after-right.mp4" poster="./blog/score-hacking-assets/firstframe-episode80-after-right-poster.jpg">浏览器不支持视频播放。</video></div></section></div><div class="media-controls"><button class="button primary" id="firstframe-play" data-play-label="播放对照">播放对照</button><label class="research-seek"><span class="sr-only">同步播放进度</span><input type="range" min="0" max="1000" value="0" step="1" id="firstframe-seek" aria-label="同步播放进度"></label><output id="firstframe-time" class="research-time">0:00 / 0:09</output></div><p class="media-error" id="firstframe-status" role="status" hidden></p><div class="firstframe-evidence-strip" id="first-frame-comparison"><p>头部视角 · 首帧</p><div class="first-frame-stills"><div><b>原始首帧</b><a href="./blog/score-hacking-assets/firstframe-episode80-firstframe-head-before.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/firstframe-episode80-firstframe-head-before.png" width="320" height="240" loading="lazy" alt="原始首帧"></a></div><div><b>调整后的首帧</b><a href="./blog/score-hacking-assets/firstframe-episode80-firstframe-head-after.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/firstframe-episode80-firstframe-head-after.png" width="320" height="240" loading="lazy" alt="调整后的首帧"></a></div><div><b>绝对差值 ×64</b><a href="./blog/score-hacking-assets/firstframe-episode80-firstframe-head-diff64.png" target="_blank" rel="noopener"><img src="./blog/score-hacking-assets/firstframe-episode80-firstframe-head-diff64.png" width="320" height="240" loading="lazy" alt="绝对差值 ×64"></a></div></div></div><figcaption>打开抽屉、放入面包：三视角视频与头部首帧对照。</figcaption></figure>
+<figure class="figure compact-metric-figure" id="e88-metric-comparison"><div class="compact-table-scroll"><table class="compact-metric-table"><thead><tr><th scope="col">指标</th><th scope="col">处理前</th><th scope="col">处理后</th></tr></thead><tbody><tr><th scope="row">Subject Consistency</th><td>74.34</td><td class="metric-after">85.42</td></tr><tr><th scope="row">Background Consistency</th><td>89.54</td><td class="metric-after">94.00</td></tr></tbody></table></div><figcaption>该轨迹三视角汇总。</figcaption></figure>
+<p>首帧参与一致性计算。在这组输出对照中，后续可见的动作过程没有改变，两项一致性分数仍然提高了。一项指标可以被优化，而未来预测保持原样。把这种涨分当作世界模型进步的证据，需要额外论证。</p>
+</section>
+</div></section>
+<section class="chapter" id="opening"><h2>从生成到筛选：我们的输出流程</h2>
+<div class="prose">
+<p>前面的对照分别检查评分器的响应，下面回到我们最终采用的完整流程，看分数如何逐步提高。各阶段均运行同一批100条验证输入，综合分按19项指标等权汇总；VQA 按有效结果计分，有效条目数随版本略有不同。</p>
+<figure class="figure pipeline-figure" id="pipeline-comparison"><ol class="pipeline-flow" aria-label="五阶段验证集得分"><li class="pipeline-stage is-measured"><span class="pipeline-step">01</span><h3>原始视频生成</h3><div class="pipeline-score"><strong>66.29</strong><span>基线</span></div></li><li class="pipeline-stage is-measured"><span class="pipeline-step">02</span><h3>时序画质恢复</h3><div class="pipeline-score"><strong>67.10</strong><span>较上一步 +0.81</span></div></li><li class="pipeline-stage is-measured"><span class="pipeline-step">03</span><h3>运动与画质像素优化</h3><div class="pipeline-score"><strong>74.65</strong><span>较上一步 +7.55</span></div></li><li class="pipeline-stage is-measured"><span class="pipeline-step">04</span><h3>首帧一致性校准</h3><div class="pipeline-score"><strong>74.96</strong><span>较上一步 +0.31</span></div></li><li class="pipeline-stage is-measured is-selection"><span class="pipeline-step">05</span><h3>Best-of-N</h3><div class="pipeline-score"><strong>76.18</strong><span>较上一步 +1.22</span></div></li></ol><figcaption>各阶段的验证集综合分。</figcaption></figure>
+<p><strong>原始视频生成。</strong> 给定初始画面、任务指令和动作序列，基线模型生成三视角未来视频，综合分为66.29。</p>
+<p><strong>时序画质恢复。</strong> 我们使用 BasicVSR++ 恢复左右腕画面，保留头部视频，并将腕部结果以 RGB 重新编码。<a href="#ref-3" class="citation">[3]</a> 综合分升至67.10。其中，Image Quality 从38.77升至40.72，Background Consistency 从73.76升至78.66；Photometric Smoothness 从30.71降至30.21，Trajectory Accuracy 从49.27变为49.29。画质改善，运动指标却没有同步提高。</p>
+<p><strong>运动与画质像素优化。</strong> 以恢复后的视频为起点，我们结合运动与画质评分信号直接调整输出像素，综合分升至74.65，增加7.55分。这一步没有重新训练生成模型。</p>
+<p><strong>首帧一致性校准。</strong> 在上一阶段输出上轻微调整首帧的一致性特征，保留后续画面，综合分升至74.96。这与前面的首帧对照相呼应：未来动作未变，分数仍有提升空间。</p>
+<p><strong>多候选筛选（Best-of-N）。</strong> 我们使用3个随机种子，将前述运动与画质像素优化、首帧一致性校准两个阶段的输出组成6组候选，逐轨迹筛选，三个视角始终整组选取。在同一验证集上，重评得分为76.18，进一步扩大候选池后达到78.00。这些开发集结果包含了候选搜索与真实参考辅助选择的收益；测试集提交则以构造的伪 GT 为参考评测、筛选候选，结果也会受到代理参考质量的影响。</p>
+<p>这条流程中，生成模型、输出处理和候选搜索都在贡献分数。最终成绩同时反映了模型预测、评分器适配和搜索预算的收益。如果榜单只展示一个总分，这些来源就会被压缩成看似统一的“模型能力”。</p>
+</div></section>
+<section class="chapter" id="worldarena"><h2>当指标成为目标，评测也需要检验</h2>
+<div class="prose">
+<p>Goodhart’s Law 常被概括为：“When a measure becomes a target, it ceases to be a good measure.”<a href="#ref-4" class="citation">[4]</a> 当指标直接成为优化目标，它与预测能力之间原有的关系就可能发生变化。一旦榜单可以被系统性地优化，却无法区分评分器适配与预测能力提升，就不能再仅凭排名来证明模型的优劣。</p>
+<span id="worldarena-updates" class="legacy-anchor"></span>
+<p>类似的问题也出现在其他公开评测中。WorldArena 2.0曾披露，极端帧数与帧率会让部分运动指标异常升高，人工复核却没有发现相应的动态预测改善。官方随后为相关指标加入真实参考上限，并补充提交规格和人工审查要求。<a href="#ref-5" class="citation">[5]</a></p>
+<figure class="figure" id="wa-video-figure"><div class="video-grid four"><div class="video-card"><div class="video-title">真实参考视频</div><video playsinline muted preload="metadata" data-fps="30.0" data-frames="123" aria-label="真实参考视频对照视频" src="./blog/score-hacking-assets/worldarena-episode1-gt.mp4" poster="./blog/score-hacking-assets/worldarena-episode1-gt-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">匿名输出一</div><video playsinline muted preload="metadata" data-fps="24.0" data-frames="121" aria-label="匿名输出一对照视频" src="./blog/score-hacking-assets/worldarena-episode1-model0.mp4" poster="./blog/score-hacking-assets/worldarena-episode1-model0-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">匿名输出二</div><video playsinline muted preload="metadata" data-fps="1.0" data-frames="16" aria-label="匿名输出二对照视频" src="./blog/score-hacking-assets/worldarena-episode1-model1.mp4" poster="./blog/score-hacking-assets/worldarena-episode1-model1-poster.jpg">浏览器不支持视频播放。</video></div><div class="video-card"><div class="video-title">匿名输出三</div><video playsinline muted preload="metadata" data-fps="24.0" data-frames="9" aria-label="匿名输出三对照视频" src="./blog/score-hacking-assets/worldarena-episode1-model2.mp4" poster="./blog/score-hacking-assets/worldarena-episode1-model2-poster.jpg">浏览器不支持视频播放。</video></div></div><div class="media-controls"><button class="button primary" id="wa-play">播放对照</button></div><p class="media-error" id="wa-status" role="status" hidden></p><div class="wa-metric-block" data-horizontal-table><p class="matrix-scroll-hint" data-scroll-hint hidden>左右滑动查看完整指标 →</p><div class="compact-table-scroll" data-table-scroll role="region" aria-label="WorldArena指标对照" tabindex="0"><table class="compact-metric-table worldarena-metric-table"><thead><tr><th scope="col">指标 / 设置</th><th scope="col">真实参考</th><th scope="col">匿名一</th><th scope="col">匿名二</th><th scope="col">匿名三</th></tr></thead><tbody><tr><th scope="row">帧数 / FPS</th><td>123 / 30</td><td>121 / 24</td><td>16 / 1</td><td>9 / 24</td></tr><tr><th scope="row">Dynamic Degree</th><td>0.1749</td><td>0.1733</td><td>0.3319</td><td>0.5411</td></tr><tr><th scope="row">Flow Score</th><td>0.0525</td><td>0.0608</td><td>0.2579</td><td>0.4028</td></tr><tr><th scope="row">Motion Smoothness</th><td>0.6298</td><td>0.6390</td><td>0.7656</td><td>0.9016</td></tr><tr><th scope="row">Trajectory Accuracy</th><td>1.0000</td><td>0.6895</td><td>0.3029</td><td>0.3243</td></tr></tbody></table></div></div><figcaption>WorldArena 2.0官方示例，分项未换算为百分制。<a href="#ref-5">[5]</a></figcaption></figure>
+<p>相较于匿名输出一，匿名输出二、三的三项运动指标更高，轨迹准确性却更低；官方复核也未发现动作完整性和交互准确性随之改善。<a href="#ref-5" class="citation">[5]</a> 这些是不同匿名模型的输出，却揭示了一个直接的冲突：运动分数更高，并不代表动作预测更准确。官方随后调整规则，说明评测不能在发布时定型，而必须持续回应实际提交暴露的问题。</p>
+<span id="autowm" class="legacy-anchor"></span>
+<p>评分反馈也会影响自动研究的方向。NaiveAI 的 AutoWM 展示了一种自动研究（autoresearch）流程：研究者设定目标、预算和评测协议，AI 代理提出方案、运行实验、分析结果，再决定下一轮尝试。作者报告其在 WorldArena-1 Track 1公开协议下取得77.43分。<a href="#ref-6" class="citation">[6]</a></p>
+<figure class="figure autowm-figure" id="autowm-pipeline"><a href="./blog/score-hacking-assets/autowm-progress.webp" target="_blank" rel="noopener"><img class="paper-image" src="./blog/score-hacking-assets/autowm-progress.webp" width="1600" height="947" loading="lazy" alt="NaiveAI公开的AutoWM研发曲线，横轴为累计研究时间，纵轴为WorldArena-1 EWMScore，最终报告77.43分"></a><div class="chart-annotations" aria-label="原图中文解读"><div><h3>模型与数据</h3><p>改写描述、扩充与筛选训练集，并尝试更强的基座模型。</p></div><div><h3>推理与搜索</h3><p>调整采样帧数，探索逐视频时间步、动态规划选帧与Best-of-N。</p></div><div><h3>输出后处理</h3><p>探索闪烁与抖动等增强画面动态的处理。</p></div></div><figcaption>AutoWM研发曲线，中文注释为本文补充。<a class="citation" href="#ref-6">[6]</a></figcaption></figure>
+<p>公开记录显示，系统使用无需 GT 的指标进行逐视频设置选择、动态规划选帧、Best-of-N 和后处理，后期还探索了闪烁、抖动来增强画面动态。<a href="#ref-6" class="citation">[6]</a> 这条曲线包含训练与数据改进，也包含围绕指标的搜索。它提示了一个更值得警惕的方向：当指标成为唯一目标，metric hacking 也可能被自动发现、组合并持续优化。评分器的偏差可以成为自动搜索不断追逐的方向。自动研究越高效，评测目标的偏差就越不能被忽视。</p>
+</div></section>
+<section class="chapter" id="leaderboards"><h2>更高的分数之后，还要验证什么</h2>
+<div class="prose">
+<p>这些问题同样适用于 Cogito。我们公开自己的处理方法与筛选依据，也主张评测本身持续接受检验。TriWorldBench 提供了共同的任务和比较条件，推动了我们的研发；发现可以系统性提分的偏差后，榜单也应修订指标与规则，说明不同版本成绩的可比范围。成绩应连同获得它的方法一起公开。否则，同一张榜单上的分数，可能回答的是不同的问题。</p>
+<p>研究不能被指标牵着走。动作条件世界模型最终要回答的是：给定这些动作，环境会怎样变化？动作会导致抓空时，正确预测就是抓空；夹爪提前松开时，物体可能掉落；动作提前停止时，任务可能无法完成。失败同样应该被准确预测。只奖励“看起来成功”的视频，会偏离动作条件预测本身的目标。</p>
+<section class="subsection" id="acwm-predictions"><h3>AC-WM仍需解决的预测问题</h3>
+<p>回看我们自己的提交，分数提升并没有消除预测中的问题。下面四条轨迹覆盖按压、抓取、双臂协作和物体搬运，仍可看到模式崩塌、物体抖动、碰撞与跨视角状态不一致。这些问题关系到动作条件世界模型（AC-WM）能否可靠地描述一次真实交互。</p>
+<div class="acwm-examples"><section class="figure acwm-case" id="acwm-episode5" data-synced-group="acwm-episode5"><h4>按下灰色开关</h4><p class="instruction"><span>Instruction</span>Command the right arm to engage the gray plastic switch</p><div class="task-views" id="acwm-episode5-videos"><div class="task-view" data-view="head"><div class="video-card"><div class="video-title">头部视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="113" aria-label="头部视角" src="./blog/score-hacking-assets/acwm-episode5-head.mp4" poster="./blog/score-hacking-assets/acwm-episode5-head-poster.png">浏览器不支持视频播放。</video></div></div><div class="task-view" data-view="left"><div class="video-card"><div class="video-title">左腕视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="113" aria-label="左腕视角" src="./blog/score-hacking-assets/acwm-episode5-left.mp4" poster="./blog/score-hacking-assets/acwm-episode5-left-poster.png">浏览器不支持视频播放。</video></div></div><div class="task-view" data-view="right"><div class="video-card"><div class="video-title">右腕视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="113" aria-label="右腕视角" src="./blog/score-hacking-assets/acwm-episode5-right.mp4" poster="./blog/score-hacking-assets/acwm-episode5-right-poster.png">浏览器不支持视频播放。</video></div></div></div><div class="media-controls"><button class="button primary" id="acwm-episode5-play" data-play-label="播放三视角">播放三视角</button><label class="research-seek"><span class="sr-only">同步播放进度</span><input type="range" min="0" max="1000" value="0" step="1" id="acwm-episode5-seek" aria-label="同步播放进度"></label><output id="acwm-episode5-time" class="research-time">0:00 / 0:04</output></div><p class="media-error" id="acwm-episode5-status" role="status" hidden></p><p class="case-observation">右腕视角仍出现模式崩塌，按压过程未能被稳定延续。</p></section><section class="figure acwm-case" id="acwm-episode79" data-synced-group="acwm-episode79"><h4>抓取并摇动塑料瓶</h4><p class="instruction"><span>Instruction</span>Use the right arm to grab the smooth plastic bottle and shake properly.</p><div class="task-views" id="acwm-episode79-videos"><div class="task-view" data-view="head"><div class="video-card"><div class="video-title">头部视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="248" aria-label="头部视角" src="./blog/score-hacking-assets/acwm-episode79-head.mp4" poster="./blog/score-hacking-assets/acwm-episode79-head-poster.png">浏览器不支持视频播放。</video></div></div><div class="task-view" data-view="left"><div class="video-card"><div class="video-title">左腕视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="248" aria-label="左腕视角" src="./blog/score-hacking-assets/acwm-episode79-left.mp4" poster="./blog/score-hacking-assets/acwm-episode79-left-poster.png">浏览器不支持视频播放。</video></div></div><div class="task-view" data-view="right"><div class="video-card"><div class="video-title">右腕视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="248" aria-label="右腕视角" src="./blog/score-hacking-assets/acwm-episode79-right.mp4" poster="./blog/score-hacking-assets/acwm-episode79-right-poster.png">浏览器不支持视频播放。</video></div></div></div><div class="media-controls"><button class="button primary" id="acwm-episode79-play" data-play-label="播放三视角">播放三视角</button><label class="research-seek"><span class="sr-only">同步播放进度</span><input type="range" min="0" max="1000" value="0" step="1" id="acwm-episode79-seek" aria-label="同步播放进度"></label><output id="acwm-episode79-time" class="research-time">0:00 / 0:08</output></div><p class="media-error" id="acwm-episode79-status" role="status" hidden></p><p class="case-observation">头部视角中，未与夹爪接触的物体也出现抖动。物体状态及其跨帧连续性，仍需要更稳定的预测。</p></section><section class="figure acwm-case" id="acwm-episode70" data-synced-group="acwm-episode70"><h4>双臂协作扫描茶盒</h4><p class="instruction"><span>Instruction</span>Take the black scanner in the left arm, pick the tea box with printed leaves in the right arm, and scan the tea box with printed leaves using the black scanner.</p><div class="task-views" id="acwm-episode70-videos"><div class="task-view" data-view="head"><div class="video-card"><div class="video-title">头部视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="173" aria-label="头部视角" src="./blog/score-hacking-assets/acwm-episode70-head.mp4" poster="./blog/score-hacking-assets/acwm-episode70-head-poster.png">浏览器不支持视频播放。</video></div></div><div class="task-view" data-view="left"><div class="video-card"><div class="video-title">左腕视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="173" aria-label="左腕视角" src="./blog/score-hacking-assets/acwm-episode70-left.mp4" poster="./blog/score-hacking-assets/acwm-episode70-left-poster.png">浏览器不支持视频播放。</video></div></div><div class="task-view" data-view="right"><div class="video-card"><div class="video-title">右腕视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="173" aria-label="右腕视角" src="./blog/score-hacking-assets/acwm-episode70-right.mp4" poster="./blog/score-hacking-assets/acwm-episode70-right-poster.png">浏览器不支持视频播放。</video></div></div></div><div class="media-controls"><button class="button primary" id="acwm-episode70-play" data-play-label="播放三视角">播放三视角</button><label class="research-seek"><span class="sr-only">同步播放进度</span><input type="range" min="0" max="1000" value="0" step="1" id="acwm-episode70-seek" aria-label="同步播放进度"></label><output id="acwm-episode70-time" class="research-time">0:00 / 0:06</output></div><p class="media-error" id="acwm-episode70-status" role="status" hidden></p><p class="case-observation">两个夹爪靠得过近并发生碰撞，预测没有体现双臂交互中的物理约束。画面是否符合真实的空间关系与碰撞条件，同样应当纳入验证。</p></section><section class="figure acwm-case" id="acwm-episode36" data-synced-group="acwm-episode36"><h4>将订书机放到红色垫子上</h4><p class="instruction"><span>Instruction</span>Grab the stapler with rectangular silver mechanism using the left arm and set it on Red mat.</p><div class="task-views" id="acwm-episode36-videos"><div class="task-view" data-view="head"><div class="video-card"><div class="video-title">头部视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="150" aria-label="头部视角" src="./blog/score-hacking-assets/acwm-episode36-head.mp4" poster="./blog/score-hacking-assets/acwm-episode36-head-poster.png">浏览器不支持视频播放。</video></div></div><div class="task-view" data-view="left"><div class="video-card"><div class="video-title">左腕视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="150" aria-label="左腕视角" src="./blog/score-hacking-assets/acwm-episode36-left.mp4" poster="./blog/score-hacking-assets/acwm-episode36-left-poster.png">浏览器不支持视频播放。</video></div></div><div class="task-view" data-view="right"><div class="video-card"><div class="video-title">右腕视角</div><video playsinline muted preload="none" width="320" height="240" data-fps="30.0" data-frames="150" aria-label="右腕视角" src="./blog/score-hacking-assets/acwm-episode36-right.mp4" poster="./blog/score-hacking-assets/acwm-episode36-right-poster.png">浏览器不支持视频播放。</video></div></div></div><div class="media-controls"><button class="button primary" id="acwm-episode36-play" data-play-label="播放三视角">播放三视角</button><label class="research-seek"><span class="sr-only">同步播放进度</span><input type="range" min="0" max="1000" value="0" step="1" id="acwm-episode36-seek" aria-label="同步播放进度"></label><output id="acwm-episode36-time" class="research-time">0:00 / 0:05</output></div><p class="media-error" id="acwm-episode36-status" role="status" hidden></p><p class="case-observation">不同视角的物体状态不一致；画面未呈现找到并抓住订书机的连续过程，物体却闪现到放置位置。</p></section></div>
+</section>
+<section class="subsection" id="future-directions"><h3>面向未来：从评测到实际应用</h3>
+<p>这些问题仍然需要从数据、训练范式和物理交互建模中寻找答案。我们希望，研究的关注点更多地回到模型能力本身，把精力投入那些尚未解决、也未必能立刻带来涨分的问题。评测应为这些探索提供可靠反馈，让有效的改进得到识别，让模型的缺陷得到重视。</p>
+<p>世界模型的价值，还需要在真实机器人和实际应用中兑现。它能否帮助机器人做出更好的决策，在失败后及时恢复，减少人工介入，并在长时间运行中保持可靠？走向商业化，还要回答这些收益能否覆盖额外的计算、时延与部署成本。我们希望行业在关注排名的同时，也投入更多精力回答这些问题，让真实使用中的效果成为判断技术价值的重要依据。</p>
+<p>我们将继续沿着这一方向推进 Cogito。未来如有机会，我们愿意进一步公开完整的训练探索、metric hacking 方法与实验结果，包括有效改进和失败尝试，供社区复现与检验。我们愿意让自己的方法接受同样的审视，也希望世界模型研究的进步，最终能够由机器人真正获得的能力来证明。</p>
+</section>
+</div></section>
+<section class="chapter sources" id="sources"><h2>参考资料</h2>
+<ol class="source-list">
+<li id="ref-1" value="1"><span id="ref-benchmark" class="legacy-anchor"></span><a href="https://www.triworldbench.com/" target="_blank" rel="noopener noreferrer">TriWorldBench官网与榜单</a>、<a href="https://arxiv.org/abs/2609.26314" target="_blank" rel="noopener noreferrer">论文</a>。</li>
+<li id="ref-2" value="2"><span id="ref-protocol" class="legacy-anchor"></span>评分实现：<a href="https://github.com/TriWorldBench/TriWorldBench/blob/59239670eb426b0c63046dcf7b038e23e61dd471/metrics/background_consistency.py#L124" target="_blank" rel="noopener noreferrer">Background Consistency</a>、<a href="https://github.com/TriWorldBench/TriWorldBench/blob/59239670eb426b0c63046dcf7b038e23e61dd471/metrics/photometric_smoothness.py#L218" target="_blank" rel="noopener noreferrer">Photometric Smoothness</a>、<a href="https://github.com/TriWorldBench/TriWorldBench/blob/59239670eb426b0c63046dcf7b038e23e61dd471/metrics/flow_score.py#L70" target="_blank" rel="noopener noreferrer">Flow Score</a>，以及<a href="https://github.com/TriWorldBench/TriWorldBench/blob/59239670eb426b0c63046dcf7b038e23e61dd471/metrics/_common/protocol_0710.py" target="_blank" rel="noopener noreferrer">state修正与结果汇总</a>。</li>
+<li id="ref-3" value="3"><span id="ref-restoration" class="legacy-anchor"></span><a href="https://ckkelvinchan.github.io/projects/BasicVSR%2B%2B/" target="_blank" rel="noopener noreferrer">BasicVSR++项目页</a>。本文使用的视频恢复方法。</li>
+<li id="ref-4" value="4"><span id="ref-goodhart" class="legacy-anchor"></span><a href="https://gwern.net/doc/statistics/decision/1997-strathern.pdf" target="_blank" rel="noopener noreferrer">Marilyn Strathern（1997）</a>，European Review 5(3)，第308页。</li>
+<li id="ref-5" value="5"><span id="ref-wa1" class="legacy-anchor"></span><span id="ref-wa2" class="legacy-anchor"></span><a href="https://v2.world-arena.ai/WorldArena-2.0/motion-quality-evaluation-update.html" target="_blank" rel="noopener noreferrer">WorldArena 2.0运动指标调整公告</a>及<a href="https://v2.world-arena.ai/WorldArena-2.0/final-update.html" target="_blank" rel="noopener noreferrer">最终评测说明</a>。</li>
+<li id="ref-6" value="6"><span id="ref-autowm" class="legacy-anchor"></span><a href="https://naive.ai/en/research/" target="_blank" rel="noopener noreferrer">NaiveAI AutoWM公开研究案例</a>。</li>
+</ol><footer class="footer"><a href="./after-hours/">彩蛋：换个语气聊聊刷分 →</a><a href="#article">回到文章顶部</a></footer></section></article></main><script>(() => {
+  const $ = id => document.getElementById(id);
+  const mediaCache = new Map();
+  const loadingVideos = new WeakMap();
+  const pause = videos => videos.forEach(video => video.pause());
+
+  const waitUntilReady = video => new Promise((resolve, reject) => {
+    if (video.readyState >= 2) return resolve();
+    const cleanup = () => {
+      clearTimeout(timeout);
+      video.removeEventListener('loadeddata', loaded);
+      video.removeEventListener('canplay', loaded);
+      video.removeEventListener('error', failed);
+    };
+    const loaded = () => { cleanup(); resolve(); };
+    const failed = () => { cleanup(); reject(new Error('视频加载失败，请重试。')); };
+    const timeout = setTimeout(() => {
+      cleanup(); reject(new Error('视频加载超时，请重试。'));
+    }, 15000);
+    video.addEventListener('loadeddata', loaded);
+    video.addEventListener('canplay', loaded);
+    video.addEventListener('error', failed);
+    video.load();
+  });
+
+  const ready = video => {
+    if (loadingVideos.has(video)) return loadingVideos.get(video);
+    const pending = (async () => {
+      const source = video.src;
+      if (!source.startsWith('blob:')) {
+        if (!mediaCache.has(source)) {
+          mediaCache.set(source, fetch(source, {signal: AbortSignal.timeout(15000)})
+            .then(response => {
+              if (!response.ok) throw new Error('视频加载失败，请重试。');
+              return response.blob();
+            })
+            .then(blob => URL.createObjectURL(blob))
+            .catch(error => { mediaCache.delete(source); throw error; }));
+        }
+        // Local Blobs play reliably even when the asset host ignores Range requests.
+        video.src = await mediaCache.get(source);
+      }
+      await waitUntilReady(video);
+    })();
+    loadingVideos.set(video, pending);
+    pending.then(() => loadingVideos.delete(video), () => loadingVideos.delete(video));
+    return pending;
+  };
+
+  const bindComparison = (name, selector, independent = false) => {
+    const button = $(name + '-play');
+    const videos = [...document.querySelectorAll(selector)];
+    const status = $(name + '-status');
+    if (!button || !videos.length) return;
+    const seek = $(name + '-seek');
+    const clock = $(name + '-time');
+    let state = 'idle';
+    let operation = 0;
+    const endTime = () => Math.max(0, Math.min(...videos.map(video =>
+      Number(video.dataset.frames) > 0 ? (Number(video.dataset.frames) - 1) / Number(video.dataset.fps || 30)
+        : Number.isFinite(video.duration) ? video.duration : 0)));
+    const formatTime = value => {
+      const seconds = Math.max(0, Math.floor(value || 0));
+      return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    };
+    const updatePosition = () => {
+      const end = endTime();
+      const current = Math.min(videos[0].currentTime || 0, end);
+      if (seek) {
+        seek.value = String(end > 0 ? Math.round(current / end * 1000) : 0);
+        seek.setAttribute('aria-valuetext', formatTime(current));
+      }
+      if (clock) clock.textContent = `${formatTime(current)} / ${formatTime(end + 1 / Number(videos[0].dataset.fps || 30))}`;
+    };
+    const clearError = () => {
+      if (!status) return;
+      status.hidden = true;
+      status.textContent = '';
+    };
+    const showError = message => {
+      if (!status) return;
+      status.textContent = message;
+      status.hidden = false;
+    };
+    const render = () => {
+      const labels = {idle: button.dataset.playLabel || '播放对照', loading: '取消加载', playing: '暂停对照',
+        paused: '继续播放', ended: '重播对照'};
+      button.textContent = labels[state];
+      button.setAttribute('aria-pressed', String(state === 'playing' || state === 'loading'));
+    };
+    const finish = () => {
+      ++operation;
+      pause(videos);
+      state = 'ended';
+      render();
+    };
+    videos.forEach(video => {
+      video.loop = false;
+      video.muted = true;
+      video.addEventListener('ended', () => {
+        if (state === 'playing' && videos.every(item => item.ended)) finish();
+      });
+      video.addEventListener('error', () => {
+        if (state !== 'playing') return;
+        ++operation;
+        pause(videos);
+        state = 'paused';
+        showError('视频暂时无法播放，请重试。');
+        render();
+      });
+    });
+    videos[0].addEventListener('timeupdate', () => {
+      updatePosition();
+      if (independent) return;
+      if (state !== 'playing' || videos[0].ended) return;
+      const time = videos[0].currentTime;
+      videos.slice(1).forEach(video => {
+        if (!video.ended && video.readyState >= 2 && Math.abs(video.currentTime - time) > .14) {
+          video.currentTime = Math.min(time, video.duration);
+        }
+      });
+    });
+    videos[0].addEventListener('loadedmetadata', updatePosition);
+    videos[0].addEventListener('seeked', updatePosition);
+    seek?.addEventListener('input', async () => {
+      const fraction = Number(seek.value) / 1000;
+      const current = ++operation;
+      pause(videos);
+      state = 'paused';
+      clearError();
+      render();
+      try {
+        await Promise.all(videos.map(ready));
+        if (current !== operation) return;
+        const target = fraction * endTime();
+        videos.forEach(video => { video.currentTime = target; });
+        updatePosition();
+      } catch {
+        if (current === operation) showError('视频暂时无法加载，请重试。');
+      }
+    });
+    button.addEventListener('click', async () => {
+      clearError();
+      if (state === 'loading' || state === 'playing') {
+        ++operation;
+        pause(videos);
+        state = videos.some(video => video.currentTime > .05) ? 'paused' : 'idle';
+        render();
+        return;
+      }
+      const reset = state === 'ended' || videos.every(video => video.ended);
+      const current = ++operation;
+      state = 'loading';
+      render();
+      try {
+        await Promise.all(videos.map(ready));
+        if (current !== operation) return;
+        if (reset) videos.forEach(video => { video.currentTime = 0; });
+        else if (!independent) {
+          const time = videos[0].currentTime;
+          videos.slice(1).forEach(video => { video.currentTime = time; });
+        }
+        // Short WorldArena videos keep their own end position when resuming.
+        const playable = videos.filter(video => !video.ended);
+        if (!playable.length) { finish(); return; }
+        state = 'playing';
+        render();
+        const results = await Promise.allSettled(playable.map(video => video.play()));
+        if (current !== operation) return;
+        if (results.some(result => result.status === 'rejected')) {
+          ++operation;
+          pause(videos);
+          state = 'paused';
+          showError('视频暂时无法同时播放，请重试。');
+          render();
+        }
+      } catch (error) {
+        if (current !== operation) return;
+        pause(videos);
+        state = 'idle';
+        showError(error?.name === 'TimeoutError' ? '视频加载超时，请重试。' : '视频暂时无法加载，请重试。');
+        render();
+      }
+    });
+    clearError();
+    render();
+    updatePosition();
+  };
+  const bindOpeningComparison = () => {
+    const videos = [...document.querySelectorAll('#own-videos video')];
+    const button = $('own-play');
+    const seek = $('own-seek');
+    const clock = $('own-time');
+    const status = $('own-status');
+    if (!button || !videos.length) return;
+    const duration = video => Number(video.dataset.frames) / Number(video.dataset.fps);
+    const lastFrame = video => (Number(video.dataset.frames) - 1) / Number(video.dataset.fps);
+    const master = videos.reduce((longest, video) => duration(video) > duration(longest) ? video : longest);
+    const end = duration(master);
+    let state = 'idle';
+    let operation = 0;
+    let animation = 0;
+    const formatTime = value => `0:${String(Math.floor(Math.max(0, value))).padStart(2, '0')}`;
+    const updatePosition = () => {
+      const current = Math.min(master.currentTime || 0, end);
+      seek.value = String(Math.round(current / end * 1000));
+      seek.setAttribute('aria-valuetext', formatTime(current));
+      clock.textContent = `${formatTime(current)} / ${formatTime(end)}`;
+    };
+    const tick = () => {
+      updatePosition();
+      if (state === 'playing') animation = requestAnimationFrame(tick);
+    };
+    const render = (update = true) => {
+      const labels = {idle: '三组一起播放', loading: '取消加载', playing: '全部暂停', paused: '继续播放', ended: '三组一起重播'};
+      button.textContent = labels[state];
+      button.setAttribute('aria-pressed', String(state === 'playing' || state === 'loading'));
+      cancelAnimationFrame(animation);
+      if (state === 'playing') tick();
+      else if (update) updatePosition();
+    };
+    const showError = message => {
+      status.textContent = message;
+      status.hidden = !message;
+    };
+    const align = target => Promise.all(videos.map(video => new Promise((resolve, reject) => {
+      const time = Math.min(target, lastFrame(video));
+      if (Math.abs(video.currentTime - time) < .001 && !video.seeking) return resolve();
+      const cleanup = () => {
+        clearTimeout(timeout);
+        video.removeEventListener('seeked', done);
+        video.removeEventListener('error', failed);
+      };
+      const done = () => { cleanup(); resolve(); };
+      const failed = () => { cleanup(); reject(new Error('视频暂时无法定位，请重试。')); };
+      const timeout = setTimeout(failed, 10000);
+      video.addEventListener('seeked', done);
+      video.addEventListener('error', failed);
+      video.currentTime = time;
+    })));
+    videos.forEach(video => {
+      video.loop = false;
+      video.muted = true;
+      video.playbackRate = 1;
+      video.addEventListener('error', () => {
+        if (state !== 'playing') return;
+        ++operation;
+        pause(videos);
+        state = 'paused';
+        showError('视频暂时无法播放，请重试。');
+        render();
+      });
+    });
+    const finishIfEnded = () => {
+      if (state !== 'playing' || !master.ended || !videos.every(video =>
+        video.ended || (video.paused && video.currentTime >= lastFrame(video) - .001))) return;
+      ++operation;
+      pause(videos);
+      state = 'ended';
+      render();
+    };
+    videos.forEach(video => video.addEventListener('ended', finishIfEnded));
+    seek.addEventListener('input', async () => {
+      const target = Number(seek.value) / 1000 * end;
+      const current = ++operation;
+      pause(videos);
+      state = 'paused';
+      showError('');
+      render(false);
+      try {
+        await Promise.all(videos.map(ready));
+        if (current !== operation) return;
+        await align(target);
+        if (current === operation) updatePosition();
+      } catch {
+        if (current === operation) showError('视频暂时无法加载，请重试。');
+      }
+    });
+    button.addEventListener('click', async () => {
+      showError('');
+      if (state === 'loading' || state === 'playing') {
+        ++operation;
+        pause(videos);
+        state = master.currentTime > .01 ? 'paused' : 'idle';
+        render();
+        return;
+      }
+      const target = state === 'ended' || master.currentTime >= lastFrame(master) ? 0 : master.currentTime;
+      const current = ++operation;
+      state = 'loading';
+      render();
+      try {
+        await Promise.all(videos.map(ready));
+        if (current !== operation) return;
+        await align(target);
+        if (current !== operation) return;
+        // Run at the original speed. Only explicit seeks and restarts reposition frames.
+        // Short clips end naturally and hold their final frame on the common timeline.
+        const playable = videos.filter(video => target < lastFrame(video));
+        state = 'playing';
+        render();
+        const results = await Promise.allSettled(playable.map(video => video.play()));
+        if (current !== operation) return;
+        if (results.some(result => result.status === 'rejected')) throw new Error('playback');
+      } catch {
+        if (current !== operation) return;
+        pause(videos);
+        state = 'paused';
+        showError('视频暂时无法同时播放，请重试。');
+        render();
+      }
+    });
+    showError('');
+    render();
+  };
+  if (document.querySelector('[data-opening-comparison]')) bindOpeningComparison();
+  else bindComparison('own', '#own-videos video');
+  bindComparison('jitter', '#jitter-videos video');
+  bindComparison('wa', '#wa-video-figure video', true);
+  document.querySelectorAll('[data-synced-group]').forEach(group => {
+    const name = group.dataset.syncedGroup;
+    if (name !== 'jitter') bindComparison(name, `#${name}-videos video`);
+  });
+  const progress=()=>{const bar=$('reading-progress');if(!bar)return;const max=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(max>0?Math.min(100,window.scrollY/max*100):0)+'%';};
+  window.addEventListener('scroll',progress,{passive:true}); progress();
+})();
+
+(() => {
+  document.querySelectorAll('[data-horizontal-table]').forEach(group => {
+    const scroller = group.querySelector('[data-table-scroll]');
+    const hint = group.querySelector('[data-scroll-hint]');
+    if (!scroller || !hint) return;
+    const update = () => { hint.hidden = scroller.scrollWidth <= scroller.clientWidth + 1; };
+    if ('ResizeObserver' in window) new ResizeObserver(update).observe(scroller);
+    else window.addEventListener('resize', update, {passive: true});
+    document.fonts?.ready.then(update);
+    update();
+  });
+})();
+
+(() => {
+  const trigger = document.getElementById('history-chart-open');
+  const dialog = document.getElementById('history-chart-dialog');
+  const close = document.getElementById('history-chart-close');
+  if (!trigger || !dialog || !close) return;
+  trigger.addEventListener('click', () => {
+    if (!dialog.open) dialog.showModal();
+  });
+  close.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) dialog.close();
+  });
+  dialog.addEventListener('close', () => trigger.focus({preventScroll: true}));
+})();
+</script></body></html>
